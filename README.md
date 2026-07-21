@@ -59,12 +59,18 @@ The embedding table is larger than the entire transformer. Two conclusions:
 RTX 2080 SUPER, ~22 TFLOPS fp16, ~30% realistic utilisation → ~6.6e12
 effective FLOP/s:
 
-| Params | Tokens | Train time | Verdict |
-|---|---|---|---|
-| **24M** | 474M | **~1 h** | This run |
-| 100M | 2B | ~50 h | A weekend, needs a bigger corpus |
-| 350M | 7B | ~3 weeks | Painful |
-| 1B | 20B | ~7 months | No |
+| Params | Tokens | FLOPs | Train time | Verdict |
+|---|---|---|---|---|
+| 24M | 10M | 1.4e15 | **~5 min** | Smoke test: does the loop run? |
+| 24M | 100M | 1.4e16 | ~45 min | Undertrained but coherent |
+| **24M** | **474M** | **6.8e16** | **~4 h** | This run — compute-optimal |
+| 100M | 2B | 1.2e18 | ~50 h | A weekend, needs a bigger corpus |
+| 1B | 20B | 1.2e20 | ~7 months | No |
+
+Note that model size alone says little about training time — the corpus
+dominates. A 24M model is small, but pushing 474M tokens through it is not
+fast. Run the 10M-token smoke test first to shake out bugs; there is no
+reason to discover a broken data loader four hours in.
 
 Cost scales with N×D, so 10× the parameters costs ~100× the compute. That is
 the whole reason frontier models cost eight figures and this one costs an
@@ -113,7 +119,8 @@ it is *derived*, and regenerating it is one command.
 
 1. `model.py` at ~24M — `n_layer=6, n_head=6, n_embd=384, block_size=256`,
    tied embeddings
-2. `train.py` — get the loss curve falling; that is the whole feedback loop
+2. `train.py` — get the loss curve falling; that is the whole feedback loop.
+   Smoke-test on ~10M tokens (~5 min) before committing to the full run
 3. `sample.py` — generate; expect grammatical, mostly coherent short stories
 4. Then experiment: smaller vocabulary, different depth/width at fixed
    parameter count, learning-rate schedules
