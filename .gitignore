@@ -1,0 +1,22 @@
+# Virtualenv — recreate with: python -m venv .venv
+.venv/
+
+# Derived data. Regenerate with prepare.py; never commit (GitHub rejects
+# files >100 MB and a tokenized corpus runs to gigabytes).
+data/
+*.bin
+
+# Checkpoints — a 100M model + Adam state is ~1.2 GB per file.
+# Use HuggingFace Hub if you want these off-machine.
+checkpoints/
+*.pt
+*.ckpt
+
+# Logs / plots
+runs/
+*.png
+!docs/*.png
+
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
