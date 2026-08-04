@@ -1,0 +1,8 @@
+# tinyllm2 (VOIDSEED) — direct dependencies.
+# Torch is installed separately by setup.sh (CUDA build, or CPU). Versions
+# pinned to the original Windows environment (Python 3.14.5).
+numpy==2.5.1
+tiktoken==0.13.0
+datasets==5.0.0
+tqdm==4.69.0
+matplotlib==3.11.1
