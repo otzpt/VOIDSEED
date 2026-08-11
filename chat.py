@@ -50,7 +50,9 @@ def trim_answer(text):
     # the next question. cut whatever it invents past the answer
     for marker in ("Question:", "<|endoftext|>"):
         text = text.split(marker)[0]
-    return text.strip()
+    # any url that survives here is invented -- a fake link that looks official
+    # is worse than no link
+    return re.sub(r"</?a\b[^>]*>", "", URL_RE.sub("", text)).strip()
 
 def sample_next(logits, prev_ids):
     logits = logits.clone()
