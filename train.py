@@ -5,16 +5,24 @@ from model import GPT
 import torch.nn.functional as F
 
 train_data = np.memmap(
-    "data/tinystories/train.bin",
+    "data/security/train.bin",
     dtype=np.uint16,
     mode="r"
 )
 val_data = np.memmap(
-    "data/tinystories/val.bin",
+    "data/security/val.bin",
     dtype=np.uint16,
     mode="r"
 )
 
+warmup_steps = 2000
+max_steps = 976562
+
+def get_lr(step):
+    if step < warmup_steps:
+        return 3e-4 * (step + 1) / warmup_steps
+    progress = (step - warmup_steps) / (max_steps - warmup_steps)
+    return 3e-4 * 0.5 * (1 + torch.cos(torch.tensor(progress * 3.14159)))
 
 def get_batch(split, block_size, batch_size, device):
     data = train_data if split == "train" else val_data
@@ -43,15 +51,12 @@ if device == "cuda":
     torch.backends.cudnn.allow_tf32 = True
 
 model = GPT(
-    d_model=384,
-    n_heads=6,
-    n_layer=6,
+    d_model=768,
+    n_heads=12,
+    n_layer=12,
     vocab_size=50257,
     block_size=256,
 ).to(device)
-
-if device == "cuda":
-    model = torch.compile(model)
 
 optimizer = torch.optim.AdamW(
     model.parameters(),
@@ -60,8 +65,26 @@ optimizer = torch.optim.AdamW(
 )
 scaler = torch.amp.GradScaler(enabled=(device == "cuda"))
 
-os.makedirs("checkpoints", exist_ok=True)
+start_step = 0
 
+checkpoint_files = [f for f in os.listdir("checkpoints") if f.endswith(".pt")] if os.path.exists("checkpoints") else []
+if checkpoint_files:
+    latest = max (checkpoint_files, key = lambda f: int(f.replace(".pt", "")))
+    checkpoint = torch.load(f"checkpoints/{latest}", map_location = device)
+
+    state_dict = checkpoint["model"]
+    state_dict = {k.replace("_orig_mod.", ""): v for k, v in state_dict.items()}
+    model.load_state_dict(state_dict)
+
+    optimizer.load_state_dict(checkpoint["optimizer"])
+    start_step = checkpoint["step"] + 1
+    print(f"resumed from checkpoint at step {start_step}")
+
+
+if device == "cuda":
+    model = torch.compile(model)
+
+os.makedirs("checkpoints", exist_ok=True)
 
 @torch.no_grad()
 def eval_val_loss():
@@ -81,7 +104,12 @@ def eval_val_loss():
     return loss.item()
 
 
-for step in range(2000):
+for step in range(start_step, max_steps):
+    lr = get_lr(step)
+
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
     x, y = get_batch(
         "train",
         block_size=256,
@@ -118,3 +146,12 @@ for step in range(2000):
             "model": model.state_dict(),
             "optimizer": optimizer.state_dict(),
         }, f"checkpoints/{step}.pt")
+
+        checkpoint_files = sorted(
+            [f for f in os.listdir("checkpoints") if f.endswith(".pt")],
+            key = lambda f: int(f.replace(".pt", ""))
+        )
+
+        if len(checkpoint_files) > 5:
+            for old_file in checkpoint_files[:-5]:
+                os.remove(f"checkpoints/{old_file}")
