@@ -1,3 +1,4 @@
+import re
 import torch
 import tiktoken
 from model import GPT
@@ -26,6 +27,23 @@ state_dict = checkpoint['model']
 state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
 model.load_state_dict(state_dict)
 model.eval()
+
+LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]*\)")
+URL_RE = re.compile(r"https?://\S+")
+
+def useful_context(passages):
+    # a chunk that's mostly markdown links is a table of contents: no answer in
+    # it, and the model copies the format and starts inventing real-looking URLs
+    keep = []
+    for p in passages:
+        lines = [l for l in p.text.split("\n") if l.strip()]
+        if lines and sum(1 for l in lines if "](" in l or "http" in l) / len(lines) > 0.5:
+            continue
+        text = URL_RE.sub("", LINK_RE.sub(r"\1", p.text))
+        keep.append(re.sub(r"[ \t]+", " ", text).strip())
+    if not keep:  # a weak chunk still beats no context at all
+        keep = [p.text for p in passages]
+    return "\n\n".join(keep)
 
 def trim_answer(text):
     # the corpus is full of Q/A text, so after answering the model just writes
@@ -57,7 +75,7 @@ while True:
 
         results = search(prompt, k = 3)
 
-        context = "\n\n".join([r.text for r in results])
+        context = useful_context(results)
         full_prompt = f"{context}\n\nQuestion: {prompt}\nAnswer: "
 
         # leave room for MAX_NEW_TOKENS: with a kv_cache, positions only grow,
