@@ -126,44 +126,46 @@ class GPT(nn.Module):
         return logits, new_kv_cache
 
 
-# quick shape sanity checks
+# quick shape sanity checks -- only when you run this file directly, not on
+# import, or every script that does `from model import GPT` would print this
+# and pay for a throwaway forward pass every single time it starts up
+if __name__ == "__main__":
+    attn = CausalSelfAttention(d_model=8, n_heads=2)
+    test = torch.randn(2, 5, 8)
+    result, _ = attn(test)
+    print(result.shape)
 
-attn = CausalSelfAttention(d_model=8, n_heads=2)
-test = torch.randn(2, 5, 8)
-result, _ = attn(test)
-print(result.shape)
+    mlp = MLP(d_model=8)
+    test2 = torch.randn(2, 5, 8)
+    result2 = mlp(test2)
+    print(result2.shape)
 
-mlp = MLP(d_model=8)
-test2 = torch.randn(2, 5, 8)
-result2 = mlp(test2)
-print(result2.shape)
+    block = Block(d_model=8, n_heads=2)
+    test3 = torch.randn(2, 5, 8)
+    result3, _ = block(test3)
+    print(result3.shape)
 
-block = Block(d_model=8, n_heads=2)
-test3 = torch.randn(2, 5, 8)
-result3, _ = block(test3)
-print(result3.shape)
+    gpt = GPT(d_model=8, n_heads=2, n_layer=2, vocab_size=100, block_size=16)
+    test4 = torch.randint(0, 100, (2, 5))
+    result4, _ = gpt(test4)
+    print(result4.shape)
 
-gpt = GPT(d_model=8, n_heads=2, n_layer=2, vocab_size=100, block_size=16)
-test4 = torch.randint(0, 100, (2, 5))
-result4, _ = gpt(test4)
-print(result4.shape)
+    # kv_cache equivalence check: feeding the whole sequence at once must give
+    # the same logits as feeding it one token at a time through the cache --
+    # that's the actual property that makes the cache safe to use.
+    gpt.eval()
+    with torch.no_grad():
+        tokens = torch.randint(0, 100, (1, 6))
 
-# kv_cache equivalence check: feeding the whole sequence at once must give
-# the same logits as feeding it one token at a time through the cache --
-# that's the actual property that makes the cache safe to use.
-gpt.eval()
-with torch.no_grad():
-    tokens = torch.randint(0, 100, (1, 6))
+        full_logits, _ = gpt(tokens)
 
-    full_logits, _ = gpt(tokens)
+        cached_logits = []
+        kv_cache = None
+        for t in range(tokens.shape[1]):
+            step_logits, kv_cache = gpt(tokens[:, t:t + 1], kv_cache)
+            cached_logits.append(step_logits)
+        cached_logits = torch.cat(cached_logits, dim=1)
 
-    cached_logits = []
-    kv_cache = None
-    for t in range(tokens.shape[1]):
-        step_logits, kv_cache = gpt(tokens[:, t:t + 1], kv_cache)
-        cached_logits.append(step_logits)
-    cached_logits = torch.cat(cached_logits, dim=1)
-
-    assert torch.allclose(full_logits, cached_logits, atol=1e-5), \
-        "kv_cache path diverged from full-sequence path"
-    print("kv_cache equivalence check passed")
+        assert torch.allclose(full_logits, cached_logits, atol=1e-5), \
+            "kv_cache path diverged from full-sequence path"
+        print("kv_cache equivalence check passed")
