@@ -49,6 +49,7 @@ class CausalSelfAttention(nn.Module):
         # to an existing cache -- chunked prefill -- would need a proper
         # offset mask; not implemented, not needed by anything that calls
         # this today.)
+        # holy yap
         if kv_cache is None:
             mask = torch.triu(torch.ones(T, T, device = x.device), diagonal=1).bool()
             scores = scores.masked_fill(mask, float('-inf'))  # -inf becomes 0 after softmax
