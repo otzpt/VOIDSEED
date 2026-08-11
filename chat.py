@@ -19,6 +19,7 @@ MAX_NEW_TOKENS = 100
 # coherent for the full 80-token sample.
 TEMPERATURE = 0.7
 TOP_K = 40
+REPETITION_PENALTY = 1.3
 
 model = GPT(d_model = 768, n_heads = 12, n_layer = 12, vocab_size = 50257, block_size = 256)
 model = model.to(device)
@@ -29,7 +30,13 @@ state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
 model.load_state_dict(state_dict)
 model.eval()
 
-def sample_next(logits):
+def sample_next(logits, prev_ids):
+    logits = logits.clone()
+    seen = torch.unique(prev_ids)
+    seen_logits = logits[:, seen]
+    # negative logits get multiplied (pushed further negative), positive ones divided --
+    # a plain divide would boost already-negative logits instead of penalizing them
+    logits[:, seen] = torch.where(seen_logits < 0, seen_logits * REPETITION_PENALTY, seen_logits / REPETITION_PENALTY)
     logits = logits / TEMPERATURE
     top_values, top_indices = torch.topk(logits, TOP_K)
     probs = torch.softmax(top_values, dim = -1)
@@ -55,12 +62,13 @@ while True:
         print(ids)
 
         ids_tensor = torch.tensor([ids], device = device)
+        prompt_len = ids_tensor.shape[1]
 
         with torch.no_grad():
             logits, kv_cache = model(ids_tensor)  # prefill: whole prompt at once
             for _ in range(MAX_NEW_TOKENS):
                 last_logits = logits[:, -1, :]
-                next_id = sample_next(last_logits)
+                next_id = sample_next(last_logits, ids_tensor[0, prompt_len:])
                 ids_tensor = torch.cat([ids_tensor, next_id], dim = 1)
                 logits, kv_cache = model(next_id, kv_cache)  # decode: just the new token
 
