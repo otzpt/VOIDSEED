@@ -32,24 +32,13 @@ class CausalSelfAttention(nn.Module):
 
         new_kv_cache = (K, V) #stores updated K, V
         # Q @ K^T, scaled by sqrt(d_head) or softmax saturates and gradients die
-        # shape is (B, n_heads, T, T_total) -- T_total == T only when there's
-        # no cache. Using T for both dims here used to silently assume that.
+        # shape is (B, n_heads, T, T_total), and T_total > T once there's a cache
         scores = Q @ K.transpose(-2, -1) / (self.d_head ** 0.5)
 
-        # Causal mask is only needed when several NEW tokens are processed in
-        # one call (training, or the first pass over a prompt with no cache
-        # yet) -- those need to not see each other's future. With a cache,
-        # the new query positions attend over the full K/V (past + new): the
-        # only thing a causal mask would forbid is seeing positions after
-        # itself, and there aren't any -- this call's new tokens are always
-        # the most recent ones in the sequence, so "no mask" already IS the
-        # correct causal mask in that case, not an approximation of it.
-        # (This holds because generate() only ever calls forward() one new
-        # token at a time once a cache exists. A multi-token chunk appended
-        # to an existing cache -- chunked prefill -- would need a proper
-        # offset mask; not implemented, not needed by anything that calls
-        # this today.)
-        # holy yap
+        # only needed when several new tokens are scored against each other at
+        # once (training, or the first pass over a prompt). With a cache we're
+        # doing one token at a time and it's always the newest, so there's no
+        # future for it to peek at -- no mask needed.
         if kv_cache is None:
             mask = torch.triu(torch.ones(T, T, device = x.device), diagonal=1).bool()
             scores = scores.masked_fill(mask, float('-inf'))  # -inf becomes 0 after softmax
@@ -107,10 +96,8 @@ class GPT(nn.Module):
         B, T = x.shape  # x is still raw token ids here, (B, T), no d_model yet
         tok_emb = self.token_embed(x)
 
-        # positions must be absolute, not relative to this call -- with a
-        # cache, x is only the new tokens, so position 0 here is really
-        # past_length in the full sequence. past_length comes from any
-        # layer's cached K (all layers cache the same number of positions).
+        # positions have to be absolute -- with a cache x is only the new
+        # tokens, so index 0 here isn't position 0 of the sequence
         past_length = kv_cache[0][0].shape[2] if kv_cache is not None else 0
         positions = torch.arange(past_length, past_length + T, device = x.device)
         pos_emb = self.pos_embed(positions)
@@ -127,9 +114,7 @@ class GPT(nn.Module):
         return logits, new_kv_cache
 
 
-# quick shape sanity checks -- only when you run this file directly, not on
-# import, or every script that does `from model import GPT` would print this
-# and pay for a throwaway forward pass every single time it starts up
+# quick shape sanity checks. behind __main__ so importing GPT doesn't run them
 if __name__ == "__main__":
     attn = CausalSelfAttention(d_model=8, n_heads=2)
     test = torch.randn(2, 5, 8)
@@ -151,9 +136,8 @@ if __name__ == "__main__":
     result4, _ = gpt(test4)
     print(result4.shape)
 
-    # kv_cache equivalence check: feeding the whole sequence at once must give
-    # the same logits as feeding it one token at a time through the cache --
-    # that's the actual property that makes the cache safe to use.
+    # whole sequence at once must give the same logits as one token at a time
+    # through the cache. if this fails the cache is silently wrong
     gpt.eval()
     with torch.no_grad():
         tokens = torch.randint(0, 100, (1, 6))

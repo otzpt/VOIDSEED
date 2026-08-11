@@ -9,14 +9,10 @@ enc = tiktoken.get_encoding("gpt2")
 BLOCK_SIZE = 256
 MAX_NEW_TOKENS = 100
 
-# raw temperature=1.0 sampling over the full 50257-token softmax lets a
-# small, undertrained model (this one: 155M params, ~12.6 tokens/param,
-# below Chinchilla-optimal -- see README) pick from the long tail of
-# unlikely tokens way too often, which is what "word salad" output looks
-# like. Cooling the distribution and cutting off everything outside the
-# top TOP_K candidates keeps it on-topic -- measured, same prompt: raw
-# sampling drifted into fabricated terms within a sentence, this stayed
-# coherent for the full 80-token sample.
+# sampling straight from the full vocab gives word salad on a model this
+# small. top-k keeps it on topic, and the penalty stops it locking onto one
+# token and repeating it forever (that showed up as blank replies).
+# careful: lowering temperature alone makes the repeating worse, not better
 TEMPERATURE = 0.7
 TOP_K = 40
 REPETITION_PENALTY = 1.3
@@ -34,8 +30,8 @@ def sample_next(logits, prev_ids):
     logits = logits.clone()
     seen = torch.unique(prev_ids)
     seen_logits = logits[:, seen]
-    # negative logits get multiplied (pushed further negative), positive ones divided --
-    # a plain divide would boost already-negative logits instead of penalizing them
+    # multiply if negative, divide if positive -- dividing a negative logit
+    # moves it towards zero, which would reward repeats instead of punishing them
     logits[:, seen] = torch.where(seen_logits < 0, seen_logits * REPETITION_PENALTY, seen_logits / REPETITION_PENALTY)
     logits = logits / TEMPERATURE
     top_values, top_indices = torch.topk(logits, TOP_K)
