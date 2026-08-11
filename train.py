@@ -95,7 +95,7 @@ def eval_val_loss():
         dtype=torch.float16,
         enabled=(device == "cuda"),
     ):
-        logits = model(x)
+        logits, _ = model(x)
         loss = F.cross_entropy(
             logits.reshape(-1, 50257),
             y.reshape(-1),
@@ -122,7 +122,7 @@ for step in range(start_step, max_steps):
         dtype=torch.float16,
         enabled=(device == "cuda"),
     ):
-        logits = model(x)
+        logits, _ = model(x)
         loss = F.cross_entropy(
             logits.reshape(-1, 50257),
             y.reshape(-1),
