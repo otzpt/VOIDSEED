@@ -15,12 +15,7 @@ of whatever the model happened to memorize.
 
 ## Try it
 
-The phase 2 model is deployed as a Hugging Face Space — a browser text box,
-no setup, no GPU: **[voidseed-tinyllm](https://huggingface.co/spaces/otzpt/voidseed-tinyllm)**
-(update this link once the Space is actually pushed — see
-`../voidseed-tinyllm-space/DEPLOY.md` in this checkout for how).
-
-Raw weights (no HF dependency): **[v1.0-weights release](https://github.com/otzpt/VOIDSEED/releases/tag/v1.0-weights)**
+Weights: **[v1.0-weights release](https://github.com/otzpt/VOIDSEED/releases/tag/v1.0-weights)**
 — `model_976000.pt`, 622 MB, weights only (no optimizer state). See the
 release notes for the architecture config and exact loading code.
 
@@ -35,7 +30,6 @@ release notes for the architecture config and exact loading code.
 | **Phase 2** — 155M params, security corpus, full run | done — step 976,000 / 976,562 |
 | `chat.py` — interactive generation with retrieval | done |
 | `search_index.py` — FTS5 full-text index over the training repos | done |
-| Hugging Face Space (Gradio) | see `../voidseed-tinyllm-space/` |
 
 ## Phase 2 — the security model (current)
 
@@ -173,7 +167,7 @@ Verified with Python 3.14.4, torch 2.13.0+cu126.
 
 | File | |
 |---|---|
-| `prepare.py` | Streams a HuggingFace dataset, or walks `repos/` for the `security` corpus; encodes with GPT-2 BPE, writes flat uint16 arrays split by document |
+| `prepare.py` | Streams a dataset via the `datasets` library, or walks `repos/` for the `security` corpus; encodes with GPT-2 BPE, writes flat uint16 arrays split by document |
 | `model.py` | Decoder-only transformer — causal self-attention, MLP, LayerNorm, residuals |
 | `train.py` | memmap batching, cross-entropy next-token loss, AdamW, cosine LR with warmup, fp16 |
 | `chat.py` | Interactive REPL: retrieves context via `search_index.py`, then generates |
