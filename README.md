@@ -20,6 +20,10 @@ no setup, no GPU: **[voidseed-tinyllm](https://huggingface.co/spaces/otzpt/voids
 (update this link once the Space is actually pushed — see
 `../voidseed-tinyllm-space/DEPLOY.md` in this checkout for how).
 
+Raw weights (no HF dependency): **[v1.0-weights release](https://github.com/otzpt/VOIDSEED/releases/tag/v1.0-weights)**
+— `model_976000.pt`, 622 MB, weights only (no optimizer state). See the
+release notes for the architecture config and exact loading code.
+
 ## Status
 
 | Stage | State |
