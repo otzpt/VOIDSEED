@@ -15,8 +15,8 @@ with np.memmap, so the corpus never has to fit in RAM.
 
 Two kinds of source:
 
-  HF datasets (tinystories, fineweb-edu) — streamed from the Hub, unchanged
-  from the original version of this file.
+  tinystories — streamed from the Hub, unchanged from the original version
+  of this file.
 
   security — built from whatever repos are cloned under repos/. This script
   only needs to know WHERE to look, not WHAT is there: any directory dropped
@@ -25,9 +25,7 @@ Two kinds of source:
 
 Usage:
     python prepare.py --dataset tinystories          # ~470M tokens, start here
-    python prepare.py --dataset fineweb-edu --limit 2_000_000_000
     python prepare.py --dataset security             # everything under repos/
-    python prepare.py --dataset security --blend-dataset fineweb-edu --limit 2_000_000_000
 """
 
 from __future__ import annotations
@@ -47,11 +45,6 @@ DATASETS = {
     # Small, clean, and the model learns coherent English fast. The right
     # first target: you can train something that works in under an hour.
     "tinystories": dict(path="roneneldan/TinyStories", name=None, text_key="text"),
-    # Real web text, heavily filtered for educational content. Use when you
-    # want a 100M-param run that produces something genuinely useful.
-    "fineweb-edu": dict(
-        path="HuggingFaceFW/fineweb-edu", name="sample-10BT", text_key="text"
-    ),
 }
 
 # Prose and structured technique data: markdown wikis, GTFOBins' per-binary
@@ -108,10 +101,9 @@ def _tokenize_stream(texts, enc, eot, f_train, f_val, rng, val_frac, limit,
     by token, so one document never straddles the train/val boundary and
     leaks) into the given open files.
 
-    Shared by every corpus source — HF streaming, local repos, and a blend of
-    both — so this split/write logic exists exactly once. Returns the updated
-    (n_train, n_val) and whether `limit` was reached, so a caller chaining
-    multiple sources knows whether to bother starting the next one.
+    Shared by both corpus sources — streamed and local — so this split/write
+    logic exists exactly once. Returns the updated (n_train, n_val) and
+    whether `limit` was reached.
     """
     for text in texts:
         if not text:
@@ -208,18 +200,7 @@ def main() -> int:
                     help="[security] also ingest .txt files. Off by default "
                          "— see the comment on LOCAL_RAW_EXTENSIONS in this "
                          "file for why.")
-    ap.add_argument("--blend-dataset", choices=sorted(DATASETS), default=None,
-                    help="[security] after repos/ is exhausted, top up the "
-                         "token budget by streaming this HF dataset too, up "
-                         "to --limit. Requires --limit: fineweb-edu's "
-                         "sample-10BT split is 10B raw tokens and has no "
-                         "other natural stopping point.")
     args = ap.parse_args()
-
-    if args.blend_dataset and args.dataset != "security":
-        ap.error("--blend-dataset only applies to --dataset security")
-    if args.blend_dataset and not args.limit:
-        ap.error("--blend-dataset requires --limit (see --help)")
 
     if args.val_frac is None:
         # 0.0005 assumes millions of documents, true for the HF streaming
@@ -238,20 +219,6 @@ def main() -> int:
 
     if args.dataset == "security":
         n_train, n_val = prepare_security(args, enc, eot, out_dir)
-
-        if args.blend_dataset and (n_train + n_val) < args.limit:
-            print(f"\nrepos/ gave {n_train + n_val:,} tokens, short of the "
-                  f"{args.limit:,} target. Topping up from "
-                  f"{args.blend_dataset} ...")
-            train_path, val_path = out_dir / "train.bin", out_dir / "val.bin"
-            rng = np.random.default_rng(1337)
-            with open(train_path, "ab") as f_train, open(val_path, "ab") as f_val:
-                bar = tqdm(unit="tok", unit_scale=True, initial=n_train + n_val,
-                          total=args.limit, desc=f"blending {args.blend_dataset}")
-                n_train, n_val, _ = prepare_hf(
-                    args, enc, eot, out_dir, DATASETS[args.blend_dataset],
-                    f_train, f_val, rng, bar, n_train, n_val)
-                bar.close()
     else:
         spec = DATASETS[args.dataset]
         train_path, val_path = out_dir / "train.bin", out_dir / "val.bin"
@@ -270,9 +237,8 @@ def main() -> int:
     if args.limit and (n_train + n_val) < args.limit:
         print(f"\nshort of the {args.limit:,}-token target by "
               f"{args.limit - (n_train + n_val):,} tokens. For `security`, "
-              f"that means repos/ (plus any --blend-dataset) did not have "
-              f"enough content — clone more sources into repos/, or raise "
-              f"--limit on the blend.")
+              f"that means repos/ did not have enough content — clone more "
+              f"sources into repos/.")
 
     # Chinchilla says ~20 tokens per parameter is compute-optimal.
     optimal = (n_train + n_val) / 20

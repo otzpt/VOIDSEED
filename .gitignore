@@ -7,7 +7,6 @@ data/
 *.bin
 
 # Checkpoints — a 100M model + Adam state is ~1.2 GB per file.
-# Use HuggingFace Hub if you want these off-machine.
 checkpoints/
 *.pt
 *.ckpt

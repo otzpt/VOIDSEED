@@ -28,8 +28,8 @@ Both exist and both work — `main.js` only talks to one of them at a time,
 set by `BACKEND_URL`.
 
 **Production (what `main.js` uses right now)** — a FastAPI service, deployed
-on Hack Club Nest (not this repo, not Vercel — Stardance's rules don't allow
-Hugging Face for hosting, so this runs on Nest instead), reachable over HTTPS
+on Hack Club Nest (not this repo, not Vercel — Stardance's hosting rules ruled
+those out, so this runs on Nest instead), reachable over HTTPS
 via a `*.hackclub.app` subdomain (Nest's dashboard reverse proxy, dual-stack
 IPv4+IPv6). Used to be a raw `sslip.io` IPv6-literal domain that only had an
 AAAA record — worked fine over IPv6, but was completely unreachable from any
