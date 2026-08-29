@@ -23,7 +23,7 @@ release notes for the architecture config and exact loading code.
 
 | Stage | State |
 |---|---|
-| `prepare.py` — data pipeline (HF datasets + local `security` corpus) | done |
+| `prepare.py` — data pipeline (`datasets` library + local `security` corpus) | done |
 | `model.py` — transformer | done |
 | `train.py` — training loop (fp16, grad clipping, cosine LR, checkpointing) | done |
 | **Phase 1** — 24M params, TinyStories, smoke test | done — reached step 231,000 |
@@ -66,7 +66,6 @@ step 976,000 — 99.94% through the schedule.
 ```bash
 python prepare.py --dataset security                 # everything under repos/
 python prepare.py --dataset security --include-txt    # + raw wordlists (not recommended, see above)
-python prepare.py --dataset security --blend-dataset fineweb-edu --limit 2_000_000_000
 ```
 
 ## Retrieval (`search_index.py`, `chat.py`)
@@ -196,7 +195,7 @@ hacktricks or a frontier model.
 ## License
 
 MIT. Dependencies are permissive throughout: PyTorch (BSD-3), tiktoken (MIT),
-datasets (Apache-2.0), numpy (BSD). TinyStories is MIT; FineWeb-Edu is
-ODC-By. The `repos/` sources (hacktricks, PayloadsAllTheThings, SecLists,
-GTFOBins, CheatSheetSeries, wstg) each carry their own license — check before
+datasets (Apache-2.0), numpy (BSD). TinyStories is MIT. The `repos/` sources
+(hacktricks, PayloadsAllTheThings, SecLists, GTFOBins, CheatSheetSeries, wstg)
+each carry their own license — check before
 redistributing the trained weights or the search index built from them.
