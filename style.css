@@ -1,0 +1,142 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: #16181d;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    gap: 10px;
+    font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+}
+
+/* Art. 50(1) transparency disclosure -- small and muted, must not compete
+   with the chat itself for attention. */
+#ai-disclosure {
+    width: 90%;
+    max-width: 640px;
+    text-align: center;
+    font-size: 12px;
+    color: #5c6370;
+}
+
+/* Art. 5(1)(e)/13 GDPR data-retention disclosure -- same muted treatment
+   as #ai-disclosure, directly below it. */
+#gdpr-disclosure {
+    width: 90%;
+    max-width: 640px;
+    text-align: center;
+    font-size: 12px;
+    color: #5c6370;
+}
+
+#gdpr-disclosure a {
+    color: inherit;
+}
+
+#chat-container {
+    width: 90%;
+    max-width: 640px;
+    background-color: #1c1f26;
+    border: 1px solid #2a2e37;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    height: 82vh;
+    overflow: hidden;
+}
+
+#messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* thin, quiet scrollbar instead of the default chunky browser one */
+#messages::-webkit-scrollbar {
+    width: 6px;
+}
+#messages::-webkit-scrollbar-thumb {
+    background-color: #2a2e37;
+    border-radius: 3px;
+}
+
+.message {
+    padding: 10px 14px;
+    border-radius: 4px;
+    max-width: 75%;
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.message.user {
+    background-color: #2a2e37;
+    color: #e8e9ec;
+    margin-left: auto;
+    border-bottom-right-radius: 0;
+}
+
+.message.bot {
+    background-color: transparent;
+    border: 1px solid #2a2e37;
+    color: #9fe0a0;
+    margin-right: auto;
+    border-bottom-left-radius: 0;
+}
+
+.message.bot::before {
+    content: "> ";
+    color: #5c6370;
+}
+
+#chat-form {
+    display: flex;
+    border-top: 1px solid #2a2e37;
+    padding: 12px;
+    gap: 10px;
+}
+
+#user-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #2a2e37;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    background-color: #16181d;
+    color: #e8e9ec;
+}
+
+#user-input:focus {
+    outline: none;
+    border-color: #5c6370;
+}
+
+#user-input::placeholder {
+    color: #5c6370;
+}
+
+#chat-form button {
+    padding: 10px 18px;
+    border: none;
+    background-color: #9fe0a0;
+    color: #16181d;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+}
+
+#chat-form button:hover {
+    background-color: #b6ecb7;
+}

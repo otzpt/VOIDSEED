@@ -1,0 +1,35 @@
+# Auto-deploy to Vercel on push to main.
+#
+# Used instead of Vercel's own Git integration because that needs the
+# Vercel GitHub App authorised in a browser, which nothing here can do
+# headlessly. Needs one repo secret: VERCEL_TOKEN
+# (Vercel -> Account Settings -> Tokens), added via:
+#   gh secret set VERCEL_TOKEN -R otzpt/LLMwebsite
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  VERCEL_ORG_ID: team_5m5zCDqazLonj0sbUBItRASY
+  VERCEL_PROJECT_ID: prj_d7DTQciLYaFmHTlVYIuoslmTBSs0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to Vercel
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN is not set -- skipping deploy."
+            echo "Add it at: Settings -> Secrets and variables -> Actions"
+            exit 0
+          fi
+          npx vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+          npx vercel@latest build --prod --token="$VERCEL_TOKEN"
+          npx vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN"
