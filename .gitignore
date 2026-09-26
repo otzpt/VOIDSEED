@@ -5,6 +5,7 @@
 # files >100 MB and a tokenized corpus runs to gigabytes).
 data/
 *.bin
+.idea
 
 # Checkpoints — a 100M model + Adam state is ~1.2 GB per file.
 checkpoints/

@@ -25,7 +25,10 @@ model = GPT(d_model = 768, n_heads = 12, n_layer = 12, vocab_size = 50257, block
 model = model.to(device)
 
 checkpoint = torch.load('checkpoints/976000.pt', map_location = device)
-state_dict = checkpoint['model']
+# quick fix make the code check for model key if not treat it as weights
+# had to change this because the release isnt the full model without this fix
+# the model wouldnt work
+state_dict = checkpoint['model'] if 'model' in checkpoint else checkpoint
 state_dict = {k.replace('_orig_mod.', ''): v for k, v in state_dict.items()}
 model.load_state_dict(state_dict)
 model.eval()
