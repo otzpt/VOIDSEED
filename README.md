@@ -10,6 +10,10 @@ I decided to do it this way so i can learn how these things actually work
 instead of just knowing how to do it, also because this way i have more control
 over what the actual code does instead of just accepting whatever is thrown at me
 
+## Known limitation
+
+So this is important, considering the size of the model and that it is under trained for its size (1.87B tokens for 155M parameters) the model is incapable of maintaining a normal conversation nor give fully correct answers, as it was tested in around 10 cybersecurity prompts the model got all the 10 wrong or partially correct, don't rely on this model for anything, if the model give an answer like "``______``" don't worry it's not broken nor it's a bug, the model wasn't trained on any conversation docs or anything like that so it just uses place holder or separation tokens which are very common in its training docs 
+
 ## Phases
 
 So this LLM went through 2 phases a smaller test phase and the "serious" one.
