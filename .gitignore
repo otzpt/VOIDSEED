@@ -25,3 +25,5 @@ ignore/
 repos/
 search.db
 *.log
+
+README_NOTES.md
